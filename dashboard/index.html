@@ -6,8 +6,6 @@
     <title>MITech 의료기기 뉴스 인텔리전스</title>
     <link
       rel="stylesheet"
-      as="style"
-      crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
     />
     <style>
@@ -340,28 +338,19 @@
       }
 
       /* ── Network graph ──────────────────────────────────── */
-      #network-svg {
+      #wordcloud-svg {
         width: 100%;
-        height: 480px;
+        height: 460px;
         display: block;
       }
-      .node-label {
+      .wordcloud-text {
+        cursor: default;
         font-family: var(--font-body);
-        font-size: 10px;
-        fill: var(--off-white);
-        pointer-events: none;
+        font-weight: 600;
+        transition: opacity 0.15s;
       }
-      .node-label-dim {
-        fill: var(--text-faint);
-      }
-      .link-line {
-        stroke: var(--text-faint);
-        stroke-opacity: 0.35;
-      }
-      .node-circle {
-        cursor: pointer;
-        stroke: var(--navy-deep);
-        stroke-width: 1.5px;
+      .wordcloud-text:hover {
+        opacity: 0.7;
       }
 
       /* ── Top 6 카드뉴스 그리드 ──────────────────────────────── */
@@ -544,6 +533,12 @@
           <div class="section-head">
             <h2><span class="num">01</span>최신 주요 기사</h2>
           </div>
+          <p class="section-desc">
+            선택한 기간 내 가장 많이 언급된 제품 순으로, 각 제품의 최신 대표
+            기사를 보여줍니다. 이미 선정된 기사와 제목이 비슷하거나 같은 회사를
+            다루는 기사는 건너뛰고 다음 순위 제품으로 넘어가 테마가 겹치지
+            않도록 합니다. 카드를 클릭하면 원문으로 이동합니다.
+          </p>
           <div class="top-articles-grid" id="top-articles-grid"></div>
         </div>
 
@@ -557,6 +552,7 @@
               <button class="toggle-btn" data-granularity="week">주별</button>
             </div>
           </div>
+          <p class="section-desc">카테고리별 기사 발행량 추이</p>
           <div class="legend-row" id="category-legend"></div>
           <div style="position: relative; height: 280px">
             <canvas id="timeseries-chart"></canvas>
@@ -580,7 +576,7 @@
               </div>
             </div>
             <p class="section-desc">
-              선택한 기간 내 가장 많이 언급된 상위 10개 키워드입니다.
+              선택한 기간 내 가장 많이 언급된 상위 10개 키워드입니다
             </p>
             <div style="position: relative; height: 320px">
               <canvas id="keyword-chart"></canvas>
@@ -599,13 +595,8 @@
 
         <div class="section" style="margin-bottom: 20px">
           <div class="section-head">
-            <h2><span class="num">05</span>인텔리전스 맵</h2>
+            <h2><span class="num">05</span>워드클라우드</h2>
           </div>
-          <p class="section-desc">
-            같은 기사에 함께 언급된 회사·기술·적응증을 연결한 관계망입니다.
-            노드가 클수록 언급 빈도가 높습니다. 노드를 드래그하여 연결 관계를
-            확인하세요.
-          </p>
           <div class="legend-row">
             <span class="legend-item"
               ><span class="legend-dot" style="background: var(--teal)"></span
@@ -620,12 +611,11 @@
               >적응증</span
             >
           </div>
-          <svg id="network-svg"></svg>
+          <svg id="wordcloud-svg"></svg>
         </div>
 
         <p class="footer-note">
-          MITech 전략기획팀 · 뉴스 트렌드 자동 분석 파이프라인 · 브라우저 로컬
-          처리 (데이터 외부 전송 없음)
+          MITech 전략기획팀 · 뉴스 트렌드 자동 분석 파이프라인
         </p>
       </div>
     </div>
@@ -633,6 +623,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.7/d3.layout.cloud.min.js"></script>
     <script src="sample_data.js"></script>
     <script
       src="dashboard_data.js"

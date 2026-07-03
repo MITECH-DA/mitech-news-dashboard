@@ -124,7 +124,7 @@
     renderTimeSeries();
     renderKeywordChart();
     renderCategoryDonut();
-    renderNetworkGraph();
+    renderWordCloud();
   }
 
   // ── KPI 카드 ──────────────────────────────────────────────────────
@@ -301,136 +301,67 @@
       .join("");
   }
 
-  // ── 04. 인텔리전스 맵 (D3 force network) ──────────────────────────
-  function renderNetworkGraph() {
-    const svg = d3.select("#network-svg");
+  // ── 05. 키워드 워드클라우드 (d3-cloud) ─────────────────────────────
+  function renderWordCloud() {
+    const svg = d3.select("#wordcloud-svg");
     svg.selectAll("*").remove();
 
-    const nodeMap = {};
-    const linkCounts = {};
-
-    function ensureNode(name, type) {
+    // 회사/기술/적응증 언급 빈도 집계 (co-mention 관계는 더 이상 필요 없음 - 단순 빈도만)
+    const counts = {};
+    function addCount(type, name) {
       const id = type + ":" + name;
-      if (!nodeMap[id]) nodeMap[id] = { id: id, name: name, type: type, count: 0 };
-      nodeMap[id].count += 1;
-      return id;
+      if (!counts[id]) counts[id] = { name, type, count: 0 };
+      counts[id].count += 1;
     }
-
     filteredData.forEach((r) => {
-      const companyIds = r.companies.map((c) => ensureNode(c, "company"));
-      const techIds = r.technologies.map((t) => ensureNode(t, "technology"));
-      const indicationIds = r.indications.map((i) => ensureNode(i, "indication"));
-
-      const pairs = [];
-      companyIds.forEach((c) => techIds.forEach((t) => pairs.push([c, t])));
-      companyIds.forEach((c) => indicationIds.forEach((i) => pairs.push([c, i])));
-      techIds.forEach((t) => indicationIds.forEach((i) => pairs.push([t, i])));
-
-      pairs.forEach(([a, b]) => {
-        const key = a < b ? a + "|" + b : b + "|" + a;
-        linkCounts[key] = (linkCounts[key] || 0) + 1;
-      });
+      r.companies.forEach((c) => addCount("company", c));
+      r.technologies.forEach((t) => addCount("technology", t));
+      r.indications.forEach((i) => addCount("indication", i));
     });
 
-    const nodes = Object.values(nodeMap);
-    const links = Object.entries(linkCounts).map(([key, weight]) => {
-      const [source, target] = key.split("|");
-      return { source, target, weight };
-    });
+    // 너무 많으면 워드클라우드가 안 읽히므로 상위 60개로 제한
+    const words = Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 60);
 
-    if (nodes.length === 0) return;
+    if (words.length === 0) return;
 
-    const container = document.getElementById("network-svg");
+    const container = document.getElementById("wordcloud-svg");
     const width = container.clientWidth || 900;
-    const height = 480;
+    const height = 460;
     svg.attr("viewBox", "0 0 " + width + " " + height);
 
-    const maxCount = Math.max(...nodes.map((n) => n.count));
-    const radiusScale = d3.scaleSqrt().domain([1, maxCount]).range([5, 26]);
+    const maxCount = Math.max(...words.map((w) => w.count));
+    const sizeScale =
+      maxCount <= 1 ? () => 22 : d3.scaleSqrt().domain([1, maxCount]).range([14, 56]);
 
-    const simulation = d3
-      .forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id((d) => d.id).distance(70).strength(0.3))
-      .force("charge", d3.forceManyBody().strength(-140))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius((d) => radiusScale(d.count) + 6));
+    const layout = d3.layout
+      .cloud()
+      .size([width, height])
+      .words(words.map((w) => ({ ...w, text: w.name, size: sizeScale(w.count) })))
+      .padding(7)
+      .rotate(0) // 한글은 회전시키면 가독성이 크게 떨어져서 항상 가로로 고정
+      .font("Pretendard")
+      .fontWeight(600)
+      .fontSize((d) => d.size)
+      .on("end", draw);
 
-    const link = svg
-      .append("g")
-      .selectAll("line")
-      .data(links)
-      .join("line")
-      .attr("class", "link-line")
-      .attr("stroke-width", (d) => Math.min(1 + d.weight * 0.8, 6));
+    layout.start();
 
-    const node = svg
-      .append("g")
-      .selectAll("circle")
-      .data(nodes)
-      .join("circle")
-      .attr("class", "node-circle")
-      .attr("r", (d) => radiusScale(d.count))
-      .attr("fill", (d) => NODE_TYPE_COLORS[d.type])
-      .call(
-        d3
-          .drag()
-          .on("start", dragStart)
-          .on("drag", dragged)
-          .on("end", dragEnd)
-      )
-      .on("mouseenter", highlightNode)
-      .on("mouseleave", clearHighlight);
+    function draw(placedWords) {
+      const g = svg.append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
-    const label = svg
-      .append("g")
-      .selectAll("text")
-      .data(nodes)
-      .join("text")
-      .attr("class", "node-label")
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => -radiusScale(d.count) - 6)
-      .text((d) => d.name);
-
-    simulation.on("tick", () => {
-      link
-        .attr("x1", (d) => d.source.x)
-        .attr("y1", (d) => d.source.y)
-        .attr("x2", (d) => d.target.x)
-        .attr("y2", (d) => d.target.y);
-      node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-      label.attr("x", (d) => d.x).attr("y", (d) => d.y);
-    });
-
-    function dragStart(event, d) {
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-    }
-    function dragged(event, d) {
-      d.fx = event.x;
-      d.fy = event.y;
-    }
-    function dragEnd(event, d) {
-      if (!event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-    }
-
-    function highlightNode(event, d) {
-      const connected = new Set([d.id]);
-      links.forEach((l) => {
-        if (l.source.id === d.id) connected.add(l.target.id);
-        if (l.target.id === d.id) connected.add(l.source.id);
-      });
-      node.attr("opacity", (n) => (connected.has(n.id) ? 1 : 0.15));
-      link.attr("opacity", (l) => (l.source.id === d.id || l.target.id === d.id ? 0.9 : 0.05));
-      label.attr("class", (n) => "node-label" + (connected.has(n.id) ? "" : " node-label-dim"))
-        .attr("opacity", (n) => (connected.has(n.id) ? 1 : 0.15));
-    }
-    function clearHighlight() {
-      node.attr("opacity", 1);
-      link.attr("opacity", 1);
-      label.attr("opacity", 1).attr("class", "node-label");
+      g.selectAll("text")
+        .data(placedWords)
+        .join("text")
+        .attr("class", "wordcloud-text")
+        .style("font-size", (d) => d.size + "px")
+        .style("fill", (d) => NODE_TYPE_COLORS[d.type])
+        .attr("text-anchor", "middle")
+        .attr("transform", (d) => "translate(" + [d.x, d.y] + ")")
+        .text((d) => d.text)
+        .append("title")
+        .text((d) => d.name + " · " + d.count + "회 언급");
     }
   }
 
@@ -618,7 +549,7 @@
     });
 
     window.addEventListener("resize", debounce(() => {
-      if (filteredData.length) renderNetworkGraph();
+      if (filteredData.length) renderWordCloud();
     }, 300));
 
     document.getElementById("reload-upload-link").addEventListener("click", () => {
