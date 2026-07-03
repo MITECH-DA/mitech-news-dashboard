@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+mitech_news.db
+trend_report.csv
+dashboard/dashboard_data.js
+old/

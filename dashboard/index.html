@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MITech 의료기기 뉴스 인텔리전스</title>
+    <link
+      rel="stylesheet"
+      as="style"
+      crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+    />
+    <style>
+      :root {
+        --navy: #0f2436;
+        --navy-deep: #092538;
+        --navy-light: #16324a;
+        --navy-border: rgba(242, 239, 230, 0.1);
+        --teal: #2dd4bf;
+        --teal-dim: #3fbcae;
+        --amber: #e0a542;
+        --coral: #e8735a;
+        --off-white: #f2efe6;
+        --text-dim: #8fa8bd;
+        --text-faint: #5b7488;
+        --font-display: 'Pretendard', 'Malgun Gothic', sans-serif;
+        --font-body:
+          'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', -apple-system,
+          sans-serif;
+        --font-mono: 'Pretendard', 'Malgun Gothic', sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--navy);
+        color: var(--off-white);
+        font-family: var(--font-body);
+        line-height: 1.55;
+      }
+
+      .wrap {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 32px 28px 80px;
+      }
+
+      /* ── Header ─────────────────────────────────────────── */
+      .masthead {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-bottom: 1px solid var(--navy-border);
+        padding-bottom: 20px;
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .masthead .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--teal);
+        margin: 0 0 6px;
+      }
+      .masthead h1 {
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 26px;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      .masthead .meta {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-dim);
+        text-align: right;
+      }
+      .status-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--text-faint);
+        margin-right: 6px;
+        vertical-align: 1px;
+      }
+      .status-dot.live {
+        background: var(--teal);
+        box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15);
+      }
+
+      /* ── Upload zone ────────────────────────────────────── */
+      .upload-zone {
+        border: 1px dashed var(--navy-border);
+        border-radius: 4px;
+        background: var(--navy-deep);
+        padding: 28px;
+        text-align: center;
+        margin-bottom: 28px;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        cursor: pointer;
+      }
+      .upload-zone.dragover {
+        border-color: var(--teal);
+        background: var(--navy-light);
+      }
+      .upload-zone p {
+        margin: 4px 0;
+      }
+      .upload-zone .primary-txt {
+        font-size: 15px;
+        color: var(--off-white);
+      }
+      .upload-zone .secondary-txt {
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+      .upload-zone input[type='file'] {
+        display: none;
+      }
+      .upload-actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      button.btn {
+        font-family: var(--font-body);
+        font-size: 13px;
+        background: transparent;
+        color: var(--off-white);
+        border: 1px solid var(--navy-border);
+        border-radius: 4px;
+        padding: 8px 16px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          color 0.15s;
+      }
+      button.btn:hover {
+        border-color: var(--teal);
+        color: var(--teal);
+      }
+      button.btn.primary {
+        border-color: var(--teal);
+        color: var(--navy);
+        background: var(--teal);
+      }
+      button.btn.primary:hover {
+        background: var(--teal-dim);
+        border-color: var(--teal-dim);
+        color: var(--navy);
+      }
+
+      #dashboard-content {
+        display: none;
+      }
+      #dashboard-content.visible {
+        display: block;
+      }
+
+      /* ── Filter bar ─────────────────────────────────────── */
+      .filter-bar {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+        background: var(--navy-deep);
+        border: 1px solid var(--navy-border);
+        border-radius: 4px;
+        padding: 14px 18px;
+        margin-bottom: 24px;
+      }
+      .filter-bar label {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-right: 6px;
+      }
+      .filter-bar input[type='date'],
+      .filter-bar input[type='text'],
+      .filter-bar select {
+        background: var(--navy);
+        border: 1px solid var(--navy-border);
+        color: var(--off-white);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        border-radius: 3px;
+        padding: 6px 8px;
+      }
+      .filter-bar input[type='text'] {
+        min-width: 160px;
+      }
+      .filter-group {
+        display: flex;
+        align-items: center;
+      }
+      .filter-spacer {
+        flex: 1;
+      }
+      .reset-link {
+        font-size: 12px;
+        color: var(--text-dim);
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .reset-link:hover {
+        color: var(--teal);
+      }
+
+      /* ── KPI cards ──────────────────────────────────────── */
+      .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+        margin-bottom: 32px;
+      }
+      .kpi-card {
+        background: var(--navy-deep);
+        border: 1px solid var(--navy-border);
+        border-radius: 4px;
+        padding: 16px 18px;
+      }
+      .kpi-card .label {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+      }
+      .kpi-card .value {
+        font-family: var(--font-mono);
+        font-weight: 600;
+        font-size: 24px;
+        color: var(--off-white);
+      }
+      .kpi-card .value.accent {
+        color: var(--teal);
+      }
+      .kpi-card .value.warn {
+        color: var(--coral);
+      }
+      .kpi-card .sub {
+        font-size: 11px;
+        color: var(--text-faint);
+        margin-top: 4px;
+      }
+
+      /* ── Section shell ──────────────────────────────────── */
+      .section {
+        background: var(--navy-deep);
+        border: 1px solid var(--navy-border);
+        border-radius: 4px;
+        padding: 22px 24px;
+        margin-bottom: 20px;
+      }
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 4px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .section-head h2 {
+        font-family: var(--font-display);
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      .section-head .num {
+        font-family: var(--font-mono);
+        color: var(--teal);
+        margin-right: 6px;
+      }
+      .section-desc {
+        font-size: 12px;
+        color: var(--text-dim);
+        margin: 0 0 16px;
+      }
+      .section-controls {
+        display: flex;
+        gap: 6px;
+      }
+      .toggle-btn {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        background: transparent;
+        color: var(--text-dim);
+        border: 1px solid var(--navy-border);
+        border-radius: 3px;
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+      .toggle-btn.active {
+        color: var(--navy);
+        background: var(--teal);
+        border-color: var(--teal);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 20px;
+      }
+      .grid-2 .section {
+        margin-bottom: 0;
+      }
+
+      /* ── Legend ─────────────────────────────────────────── */
+      .legend-row {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin: 4px 0 14px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+      .legend-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+      }
+
+      /* ── Network graph ──────────────────────────────────── */
+      #network-svg {
+        width: 100%;
+        height: 480px;
+        display: block;
+      }
+      .node-label {
+        font-family: var(--font-body);
+        font-size: 10px;
+        fill: var(--off-white);
+        pointer-events: none;
+      }
+      .node-label-dim {
+        fill: var(--text-faint);
+      }
+      .link-line {
+        stroke: var(--text-faint);
+        stroke-opacity: 0.35;
+      }
+      .node-circle {
+        cursor: pointer;
+        stroke: var(--navy-deep);
+        stroke-width: 1.5px;
+      }
+
+      /* ── Top 6 카드뉴스 그리드 ──────────────────────────────── */
+      .top-articles-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      .top-card {
+        position: relative;
+        display: block;
+        aspect-ratio: 3 / 4;
+        border-radius: 6px;
+        overflow: hidden;
+        background-color: var(--navy-light);
+        background-size: cover;
+        background-position: center;
+        border: 1px solid var(--navy-border);
+        text-decoration: none;
+        transition:
+          transform 0.15s ease,
+          border-color 0.15s ease;
+      }
+      .top-card:hover {
+        transform: scale(1.015);
+        border-color: var(--teal);
+      }
+      .top-card-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(9, 37, 56, 0) 42%,
+          rgba(9, 37, 56, 0.95) 100%
+        );
+      }
+      .top-card.no-image .top-card-overlay {
+        background: linear-gradient(
+          180deg,
+          rgba(9, 37, 56, 0.15) 0%,
+          rgba(9, 37, 56, 0.95) 100%
+        );
+      }
+      .top-card-content {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 14px 16px 16px;
+      }
+      .top-card-eyebrow {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.02em;
+        margin-bottom: 7px;
+      }
+      .top-card-title {
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 15px;
+        line-height: 1.35;
+        color: var(--off-white);
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .top-card-source {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-dim);
+        margin-top: 6px;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+
+      .footer-note {
+        margin-top: 24px;
+        font-size: 11px;
+        color: var(--text-faint);
+        text-align: center;
+      }
+
+      @media (max-width: 900px) {
+        .kpi-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+        .top-articles-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 560px) {
+        .top-articles-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="masthead">
+        <div>
+          <p class="eyebrow">MITech · 전략기획팀</p>
+          <h1>의료기기 뉴스 인텔리전스 대시보드</h1>
+        </div>
+        <div class="meta">
+          <span id="header-status"
+            ><span class="status-dot"></span>데이터 대기 중</span
+          >
+          <span> · </span>
+          <span class="reset-link" id="reload-upload-link" style="display: none"
+            >다른 CSV 불러오기</span
+          >
+        </div>
+      </div>
+
+      <div class="upload-zone" id="upload-zone">
+        <p class="primary-txt">
+          trend_report.csv 파일을 여기로 끌어다 놓거나 클릭해서 선택하세요
+        </p>
+        <p class="secondary-txt">
+          파이프라인의 trend_report.py 실행 결과(CSV)를 그대로 사용할 수
+          있습니다. 데이터는 브라우저 안에서만 처리되며 외부로 전송되지
+          않습니다.
+        </p>
+        <input type="file" id="file-input" accept=".csv" />
+        <div class="upload-actions">
+          <button class="btn primary" id="pick-file-btn">CSV 파일 선택</button>
+          <button class="btn" id="sample-data-btn">
+            샘플 데이터로 미리보기
+          </button>
+        </div>
+      </div>
+
+      <div id="dashboard-content">
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label for="date-start">기간</label>
+            <input type="date" id="date-start" />
+          </div>
+          <div class="filter-group">
+            <span style="color: var(--text-faint); font-size: 12px">~</span>
+          </div>
+          <div class="filter-group">
+            <input type="date" id="date-end" />
+          </div>
+          <div class="filter-group">
+            <label for="category-filter">카테고리</label>
+            <select id="category-filter">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="search-input">검색</label>
+            <input
+              type="text"
+              id="search-input"
+              placeholder="회사·기술·적응증"
+            />
+          </div>
+          <div class="filter-spacer"></div>
+          <span class="reset-link" id="reset-filters">필터 초기화</span>
+        </div>
+
+        <div class="kpi-row" id="kpi-row"></div>
+
+        <div class="section" style="margin-bottom: 20px">
+          <div class="section-head">
+            <h2><span class="num">01</span>최신 주요 기사</h2>
+          </div>
+          <div class="top-articles-grid" id="top-articles-grid"></div>
+        </div>
+
+        <div class="section" style="margin-bottom: 20px">
+          <div class="section-head">
+            <h2><span class="num">02</span>기사량 추이</h2>
+            <div class="section-controls">
+              <button class="toggle-btn active" data-granularity="day">
+                일별
+              </button>
+              <button class="toggle-btn" data-granularity="week">주별</button>
+            </div>
+          </div>
+          <div class="legend-row" id="category-legend"></div>
+          <div style="position: relative; height: 280px">
+            <canvas id="timeseries-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom: 20px">
+          <div class="section">
+            <div class="section-head">
+              <h2><span class="num">03</span>최다 언급 키워드</h2>
+              <div class="section-controls">
+                <button class="toggle-btn active" data-keyword-type="companies">
+                  회사
+                </button>
+                <button class="toggle-btn" data-keyword-type="technologies">
+                  기술
+                </button>
+                <button class="toggle-btn" data-keyword-type="indications">
+                  적응증
+                </button>
+              </div>
+            </div>
+            <p class="section-desc">
+              선택한 기간 내 가장 많이 언급된 상위 10개 키워드입니다.
+            </p>
+            <div style="position: relative; height: 320px">
+              <canvas id="keyword-chart"></canvas>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-head">
+              <h2><span class="num">04</span>카테고리 분포</h2>
+            </div>
+            <div style="position: relative; height: 220px">
+              <canvas id="category-donut"></canvas>
+            </div>
+            <div id="category-legend-donut" style="margin-top: 14px"></div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-bottom: 20px">
+          <div class="section-head">
+            <h2><span class="num">05</span>인텔리전스 맵</h2>
+          </div>
+          <p class="section-desc">
+            같은 기사에 함께 언급된 회사·기술·적응증을 연결한 관계망입니다.
+            노드가 클수록 언급 빈도가 높습니다. 노드를 드래그하여 연결 관계를
+            확인하세요.
+          </p>
+          <div class="legend-row">
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: var(--teal)"></span
+              >회사</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: var(--amber)"></span
+              >기술</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: var(--coral)"></span
+              >적응증</span
+            >
+          </div>
+          <svg id="network-svg"></svg>
+        </div>
+
+        <p class="footer-note">
+          MITech 전략기획팀 · 뉴스 트렌드 자동 분석 파이프라인 · 브라우저 로컬
+          처리 (데이터 외부 전송 없음)
+        </p>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="sample_data.js"></script>
+    <script
+      src="dashboard_data.js"
+      onerror="window.__reportDataMissing = true"
+    ></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>
