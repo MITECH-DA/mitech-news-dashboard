@@ -353,6 +353,43 @@
         opacity: 0.7;
       }
 
+      /* ── 00. 오늘의 카드뉴스 (가로 스크롤) ──────────────────────────── */
+      .daily-cards-strip {
+        display: flex;
+        gap: 14px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+      }
+      .daily-cards-strip::-webkit-scrollbar {
+        height: 6px;
+      }
+      .daily-cards-strip::-webkit-scrollbar-thumb {
+        background: var(--navy-border);
+        border-radius: 3px;
+      }
+      .daily-card {
+        flex: 0 0 auto;
+        width: 375px;
+        aspect-ratio: 4 / 5;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid var(--navy-border);
+        display: block;
+        transition:
+          transform 0.15s ease,
+          border-color 0.15s ease;
+      }
+      .daily-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--teal);
+      }
+      .daily-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
       /* ── Top 6 카드뉴스 그리드 ──────────────────────────────── */
       .top-articles-grid {
         display: grid;
@@ -417,7 +454,6 @@
         margin: 0;
         display: -webkit-box;
         -webkit-line-clamp: 3;
-        line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
@@ -531,15 +567,28 @@
 
         <div class="section" style="margin-bottom: 20px">
           <div class="section-head">
-            <h2><span class="num">01</span>최신 주요 기사</h2>
+            <h2><span class="num">01</span>오늘의 카드뉴스</h2>
           </div>
-          <p class="section-desc">카드를 클릭하면 원문으로 이동합니다.</p>
+          <p class="section-desc">
+            오늘의 카드뉴스입니다. 이미지를 클릭하면 원문 기사로 이동합니다.
+          </p>
+          <div class="daily-cards-strip" id="daily-cards-strip"></div>
+        </div>
+
+        <div class="section" style="margin-bottom: 20px">
+          <div class="section-head">
+            <h2><span class="num">02</span>주요 기사</h2>
+          </div>
+          <p class="section-desc">
+            선택한 기간 내 가장 많이 언급된 제품 순으로, 각 제품의 최신 대표
+            기사를 보여줍니다.
+          </p>
           <div class="top-articles-grid" id="top-articles-grid"></div>
         </div>
 
         <div class="section" style="margin-bottom: 20px">
           <div class="section-head">
-            <h2><span class="num">02</span>기사량 추이</h2>
+            <h2><span class="num">03</span>기사량 추이</h2>
             <div class="section-controls">
               <button class="toggle-btn active" data-granularity="day">
                 일별
@@ -547,7 +596,10 @@
               <button class="toggle-btn" data-granularity="week">주별</button>
             </div>
           </div>
-          <p class="section-desc">카테고리별 기사 발행량 추이</p>
+          <p class="section-desc">
+            카테고리별 기사 발행량 추이. 특정 카테고리가 급증하면 해당 이슈가
+            트렌드로 부상 중이라는 신호입니다.
+          </p>
           <div class="legend-row" id="category-legend"></div>
           <div style="position: relative; height: 280px">
             <canvas id="timeseries-chart"></canvas>
@@ -557,7 +609,7 @@
         <div class="grid-2" style="margin-bottom: 20px">
           <div class="section">
             <div class="section-head">
-              <h2><span class="num">03</span>최다 언급 키워드</h2>
+              <h2><span class="num">04</span>최다 언급 키워드</h2>
               <div class="section-controls">
                 <button class="toggle-btn active" data-keyword-type="companies">
                   회사
@@ -571,7 +623,7 @@
               </div>
             </div>
             <p class="section-desc">
-              선택한 기간 내 가장 많이 언급된 상위 10개 키워드입니다
+              선택한 기간 내 가장 많이 언급된 상위 10개 키워드입니다.
             </p>
             <div style="position: relative; height: 320px">
               <canvas id="keyword-chart"></canvas>
@@ -579,8 +631,9 @@
           </div>
           <div class="section">
             <div class="section-head">
-              <h2><span class="num">04</span>카테고리 분포</h2>
+              <h2><span class="num">05</span>카테고리 분포</h2>
             </div>
+            <p class="section-desc">기사 성격별 비중입니다.</p>
             <div style="position: relative; height: 220px">
               <canvas id="category-donut"></canvas>
             </div>
@@ -590,8 +643,12 @@
 
         <div class="section" style="margin-bottom: 20px">
           <div class="section-head">
-            <h2><span class="num">05</span>워드클라우드</h2>
+            <h2><span class="num">06</span>키워드 워드클라우드</h2>
           </div>
+          <p class="section-desc">
+            선택한 기간 내 가장 많이 언급된 회사·기술·적응증을 빈도에 비례한
+            크기로 보여줍니다. 글자에 마우스를 올리면 언급 횟수가 보입니다.
+          </p>
           <div class="legend-row">
             <span class="legend-item"
               ><span class="legend-dot" style="background: var(--teal)"></span
@@ -610,7 +667,8 @@
         </div>
 
         <p class="footer-note">
-          MITech 전략기획팀 · 뉴스 트렌드 자동 분석 파이프라인
+          MITech 전략기획팀 · 뉴스 트렌드 자동 분석 파이프라인 · 브라우저 로컬
+          처리 (데이터 외부 전송 없음)
         </p>
       </div>
     </div>
@@ -620,6 +678,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.7/d3.layout.cloud.min.js"></script>
     <script src="sample_data.js"></script>
+    <script src="daily_cards.js"></script>
     <script
       src="dashboard_data.js"
       onerror="window.__reportDataMissing = true"

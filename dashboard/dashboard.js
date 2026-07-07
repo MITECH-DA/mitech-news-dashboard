@@ -469,13 +469,47 @@
   }
 
   function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str || "";
-    return div.innerHTML;
+    // HTML 속성값(title="...", href="...") 안에도 안전하게 쓰기 위해 따옴표까지 이스케이프.
+    // (textContent/innerHTML 방식은 &, <, >만 이스케이프하고 따옴표는 안 해줘서
+    //  제목에 큰따옴표가 있으면 속성이 중간에 끊기는 버그가 있었음)
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // ── 00. 오늘의 카드뉴스 (daily_cards.js에서 로드, CSV 데이터와 무관) ──
+  function renderDailyCards() {
+    const container = document.getElementById("daily-cards-strip");
+    if (!container) return;
+
+    const cards = typeof DAILY_CARDS !== "undefined" && Array.isArray(DAILY_CARDS) ? DAILY_CARDS : [];
+
+    if (cards.length === 0) {
+      container.innerHTML =
+        '<div class="empty-state">dashboard/daily_cards.js에 오늘의 카드뉴스를 등록하면 여기에 표시됩니다.</div>';
+      return;
+    }
+
+    container.innerHTML = cards
+      .map((c) => {
+        const title = c.title || "";
+        return (
+          '<a class="daily-card" href="' + escapeHtml(c.url || "#") + '" target="_blank" rel="noopener" title="' +
+          escapeHtml(title) + '">' +
+          '<img src="' + escapeHtml(c.image || "") + '" alt="' + escapeHtml(title) + '" loading="lazy">' +
+          "</a>"
+        );
+      })
+      .join("");
   }
 
   // ── 이벤트 바인딩 ──────────────────────────────────────────────────
   function setupEvents() {
+    renderDailyCards(); // CSV 로드 여부와 무관하게 항상 표시
+
     const uploadZone = document.getElementById("upload-zone");
     const fileInput = document.getElementById("file-input");
 
