@@ -1,110 +1,68 @@
 # -*- coding: utf-8 -*-
 """
-메인 파이프라인
-실행 방법: python pipeline.py
+메인 파이프라인 (텍스트 모니터링 로그 기반)
+실행 방법: python pipeline.py <로그파일.txt>
 
 흐름:
-  1. RSS + 네이버뉴스 API 수집
-  2. 기존 DB 대비 + 배치 내부 중복 제거
-  3. 네이버 기사 이미지 보강 (og:image, best-effort)
-  4. boilerplate 제거 (정제)
-  5. raw_articles 테이블에 저장
-  6. 아직 태깅 안 된 기사에 대해 LLM 태깅 실행
-  7. tagged_articles 테이블에 저장
+  1. 외부에서 뉴스 데이터 수집 (텍스트 모니터링 로그 txt 형식)
+  2. 텍스트 모니터링 로그를 파싱, 뉴스기사 이미지 보강 (og:image, best-effort)
+  3. LLM 태깅 후 tagged_articles 테이블에 저장
 
-cron으로 매일 아침 실행하는 것을 권장 (예: 매일 08:00)
-  0 8 * * * cd /path/to/mitech_news_pipeline && python3 pipeline.py >> pipeline.log 2>&1
+외부에서 사람이 직접 모니터링해서 텍스트로 넘겨주는 데이터가 유일한 수집 경로이므로,
+RSS/네이버 API 자동 수집이나 배치 내부 중복 제거 단계는 없다.
+(URL이 이미 DB에 있으면 조용히 건너뛰긴 하지만, 이는 안전장치일 뿐 별도의 "중복 제거" 단계는 아니다.
+ raw_articles.url에 UNIQUE 제약이 걸려 있어 같은 로그를 실수로 두 번 넣어도 데이터가 겹쳐 쌓이지 않는다.)
+
+실제 파싱/태깅 로직은 parse_monitoring_log.py에 있고, 여기서는 그걸 그대로 불러와 실행한다.
+(같은 로직을 두 곳에서 관리하지 않기 위함 - 로그를 직접 다뤄보고 싶으면 parse_monitoring_log.py를
+ dry-run으로 먼저 실행해서 파싱 결과를 미리 확인할 수 있다.)
+
+cron으로 매일 아침 실행하는 것을 권장 (예: 매일 08:00, 그날의 로그 파일을 고정 경로에 저장해두고 실행)
+  0 8 * * * cd /path/to/mitech_news_pipeline && python3 pipeline.py /path/to/today_log.txt >> pipeline.log 2>&1
 """
+import argparse
 import logging
 
-import config
 import storage
-import collector
-import cleaner
-import tagger
+import parse_monitoring_log as monitor
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def run_collection_and_cleaning():
-    """1~5단계: 수집 -> 관련성 필터 -> 중복제거 -> 이미지 보강 -> 정제 -> 저장."""
-    logger.info("=== 1. 수집 시작 ===")
-    rss_articles = collector.fetch_all_rss()
-    naver_articles = collector.fetch_all_naver()
-    logger.info(f"총 수집: {len(rss_articles) + len(naver_articles)}건 (RSS {len(rss_articles)} + 네이버 {len(naver_articles)})")
+def run(log_path, include_irrelevant=False, enrich_image=True):
+    """1~3단계: 로그 읽기 -> 파싱 -> 이미지 보강 -> LLM 태깅 -> 저장."""
+    logger.info("=== 1. 외부 모니터링 로그 읽기 ===")
+    with open(log_path, encoding="utf-8") as f:
+        text = f.read()
 
-    # 네이버 검색은 boolean을 지원하지 않아 결과가 느슨하게 잡히므로,
-    # 네이버 소스에만 관련성 키워드 필터를 적용해 노이즈를 제거한다.
-    # RSS(MassDevice 등)는 이미 의료기기 전문 매체이므로 필터를 적용하지 않는다.
-    before = len(naver_articles)
-    naver_articles = cleaner.filter_relevant(naver_articles)
-    logger.info(f"네이버 관련성 필터: {before}건 -> {len(naver_articles)}건 (제외: {before - len(naver_articles)}건)")
-
-    all_articles = rss_articles + naver_articles
-
-    if not all_articles:
-        logger.warning("수집된 기사가 없습니다. 소스 설정을 확인하세요.")
+    articles = monitor.parse_log(text)
+    logger.info(f"파싱된 기사: {len(articles)}건")
+    if not articles:
+        logger.warning("파싱된 기사가 없습니다. 로그 형식을 확인하세요.")
         return 0
 
-    logger.info("=== 2. 중복 제거 ===")
-    existing_urls = storage.get_existing_urls()
-    all_articles = [a for a in all_articles if a["url"] not in existing_urls]  # URL 완전 중복 우선 제거
+    by_section = {}
+    for a in articles:
+        by_section[a["monitoring_type"]] = by_section.get(a["monitoring_type"], 0) + 1
+    for section, count in by_section.items():
+        logger.info(f"  - [{section or '미분류'}] {count}건")
 
-    existing_titles = [title for _, title in storage.get_existing_titles()]
-    deduped = cleaner.dedup_batch(all_articles, existing_titles=existing_titles)
-    logger.info(f"중복 제거 후: {len(deduped)}건 (제거됨: {len(all_articles) - len(deduped)}건)")
-
-    # 네이버 뉴스 검색 API는 썸네일을 안 줘서 image_url이 항상 비어있음.
-    # 실제로 저장될(필터·중복제거를 통과한) 기사에 대해서만 원문 페이지에서
-    # og:image를 best-effort로 가져와 보강한다 (불필요한 요청 최소화).
-    logger.info("=== 3. 네이버 기사 이미지 보강 (og:image) ===")
-    deduped = collector.enrich_images(deduped)
-
-    logger.info("=== 4. 정제 (boilerplate 제거) ===")
-    cleaned = [cleaner.clean_article(a) for a in deduped]
-
-    logger.info("=== 5. DB 저장 ===")
-    saved_count = 0
-    for article in cleaned:
-        article_id = storage.insert_raw_article(
-            source=article["source"],
-            title=article["title"],
-            url=article["url"],
-            published_date=article["published_date"],
-            raw_text=article["raw_text"],
-            image_url=article.get("image_url", ""),
-        )
-        if article_id:
-            saved_count += 1
-    logger.info(f"신규 저장: {saved_count}건")
-    return saved_count
-
-
-def run_tagging():
-    """6~7단계: 미태깅 기사 LLM 태깅 -> 저장."""
-    logger.info("=== 6. LLM 태깅 대상 조회 ===")
-    untagged = storage.get_untagged_articles()
-    logger.info(f"태깅 대상: {len(untagged)}건")
-
-    if not untagged:
-        return 0
-
-    logger.info("=== 7. LLM 태깅 실행 ===")
-    tag_results = tagger.tag_batch(untagged)
-
-    for article_id, tag_result in tag_results:
-        storage.insert_tagged_article(article_id, tag_result)
-
-    logger.info(f"태깅 완료: {len(tag_results)}/{len(untagged)}건")
-    return len(tag_results)
+    logger.info("=== 2~3. 이미지 보강 + LLM 태깅 + DB 저장 ===")
+    saved = monitor.tag_and_save(articles, include_irrelevant=include_irrelevant, enrich_image=enrich_image)
+    return saved
 
 
 def main():
+    parser = argparse.ArgumentParser(description="텍스트 모니터링 로그 기반 뉴스 파이프라인")
+    parser.add_argument("log_file", help="텍스트 모니터링 로그 파일 경로")
+    parser.add_argument("--include-irrelevant", action="store_true", help="'기타' 카테고리 관련성 필터를 건너뛰고 전부 포함")
+    parser.add_argument("--no-image", action="store_true", help="og:image 보강을 건너뜀 (속도 우선)")
+    args = parser.parse_args()
+
     storage.init_db()
-    saved = run_collection_and_cleaning()
-    tagged = run_tagging()
-    logger.info(f"=== 파이프라인 완료: 신규 수집 {saved}건, 태깅 {tagged}건 ===")
+    saved = run(args.log_file, include_irrelevant=args.include_irrelevant, enrich_image=not args.no_image)
+    logger.info(f"=== 파이프라인 완료: 신규 저장 {saved}건 ===")
 
 
 if __name__ == "__main__":
