@@ -359,6 +359,8 @@
         gap: 14px;
         overflow-x: auto;
         padding-bottom: 10px;
+        scroll-snap-type: x mandatory; /*수정 부분*/
+        -webkit-overflow-scrolling: touch; /*수정 부분*/
       }
       .daily-cards-strip::-webkit-scrollbar {
         height: 6px;
@@ -378,6 +380,7 @@
         transition:
           transform 0.15s ease,
           border-color 0.15s ease;
+        scroll-snap-align: start;
       }
       .daily-card:hover {
         transform: translateY(-3px);
@@ -388,6 +391,29 @@
         height: 100%;
         object-fit: cover;
         display: block;
+      }
+      .daily-card-date {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        z-index: 1;
+        background: rgba(9, 37, 56, 0.85);
+        color: var(--teal);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        pointer-events: none;
+      }
+      @media (max-width: 640px) {
+        /* 모바일에서는 카드 하나가 화면에 거의 다 차게(옆 카드가 살짝 보이는 정도) 키워서
+     스와이프 한 번에 카드 하나씩 스냅되도록 함 */
+        .daily-cards-strip {
+          scroll-padding-left: 20px;
+        }
+        .daily-card {
+          width: 82vw;
+        }
       }
 
       /* ── Top 6 카드뉴스 그리드 ──────────────────────────────── */
@@ -454,6 +480,7 @@
         margin: 0;
         display: -webkit-box;
         -webkit-line-clamp: 3;
+        line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
@@ -596,10 +623,7 @@
               <button class="toggle-btn" data-granularity="week">주별</button>
             </div>
           </div>
-          <p class="section-desc">
-            카테고리별 기사 발행량 추이. 특정 카테고리가 급증하면 해당 이슈가
-            트렌드로 부상 중이라는 신호입니다.
-          </p>
+          <p class="section-desc">카테고리별 기사 발행량 추이</p>
           <div class="legend-row" id="category-legend"></div>
           <div style="position: relative; height: 280px">
             <canvas id="timeseries-chart"></canvas>
@@ -667,8 +691,7 @@
         </div>
 
         <p class="footer-note">
-          MITech 전략기획팀 · 뉴스 트렌드 자동 분석 파이프라인 · 브라우저 로컬
-          처리 (데이터 외부 전송 없음)
+          MITech 전략기획팀 · 뉴스 트렌드 자동 분석 파이프라인
         </p>
       </div>
     </div>
